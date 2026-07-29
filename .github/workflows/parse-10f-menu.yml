@@ -3,8 +3,15 @@ name: Parse 10F Menu
 on:
   push:
     paths:
-      - 'images/**'
+      - "images/**"
   workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: parse-10f-menu
+  cancel-in-progress: false
 
 jobs:
   parse-menu:
@@ -14,49 +21,47 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # rebase 위해 전체 히스토리
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install dependencies
-        run: npm install @google/generative-ai
-
-      - name: Setup Gemini API Key
-        run: |
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
+        run: npm install @google/genai
 
       - name: Find images
         id: find-images
+        shell: bash
         run: |
-          IMAGES=$(find images -maxdepth 1 -type f \( -iname "*.png" \) || true)
-
-          if [ -z "$IMAGES" ]; then
-            echo "No images found"
-            echo "has_images=false" >> $GITHUB_OUTPUT
+          if find images -maxdepth 1 -type f -iname "*.png" -print -quit | grep -q .; then
+            echo "Found PNG images"
+            find images -maxdepth 1 -type f -iname "*.png" -print
+            echo "has_images=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Found images:"
-            echo "$IMAGES"
-            echo "has_images=true" >> $GITHUB_OUTPUT
+            echo "No images found"
+            echo "has_images=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Parse all images
         if: steps.find-images.outputs.has_images == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.6-flash
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
           mkdir -p data-10f
 
-          for img in images/*.png images/*.PNG; do
-            [ -e "$img" ] || continue
-
-            echo "Parsing $img"
+          find images -maxdepth 1 -type f -iname "*.png" -print0 |
+          while IFS= read -r -d '' img; do
+            echo "Parsing: $img"
 
             if node parse-10f-menu.js "$img"; then
               echo "Parsed successfully: $img"
-              rm "$img"
+              rm -- "$img"
             else
               echo "Failed to parse: $img"
             fi
@@ -64,7 +69,10 @@ jobs:
 
       - name: Commit and push results safely
         if: steps.find-images.outputs.has_images == 'true'
+        shell: bash
         run: |
+          set -euo pipefail
+
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
@@ -77,7 +85,5 @@ jobs:
 
           git commit -m "Parse 10F menu images"
 
-          # 최신 main 위로 재배치 (동시 실행 대비)
           git pull --rebase origin main
-
-          git push origin main
+          git push origin HEAD:main
