@@ -5,12 +5,17 @@
 > 20층 식단은 **Welstory API** 기반으로 수집하고, 10층 식단은 **Mattermost에 업로드된 주간 식단표 PNG**를 자동 수집한 뒤 **Google Gemini API**로 파싱합니다.  
 > 최종 데이터는 JSON으로 저장되며, Chrome Extension **Bap Time with SSAFY**에서 바로 사용할 수 있습니다.
 
+### Update
+기존 개발자분의 수료로 10층 공존 식당 업데이트를 위해 포크한 레포입니다.
+
+원본 레포: https://github.com/C4T4767/baptimessafy
 
 ---
 
 ## 서비스 링크
 
-- Chrome Web Store: [Bap Time with SSAFY](https://chromewebstore.google.com/detail/beminaoknafglpdlnjlconallpkhfgdm)
+- ~~Chrome Web Store: [Bap Time with SSAFY](https://chromewebstore.google.com/detail/beminaoknafglpdlnjlconallpkhfgdm)~~  
+
 
 > 작성 시점 기준
 > - 사용자 **461명**

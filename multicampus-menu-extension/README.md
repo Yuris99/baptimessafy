@@ -13,8 +13,8 @@
 
 ## 🌐 데이터 소스
 
-- **20층**: `https://raw.githubusercontent.com/C4T4767/ssabap/main/data/YYYY-MM-DD.json`
-- **10층**: `https://raw.githubusercontent.com/C4T4767/ssabap/main/data-10f/YYYY-MM-DD.json`
+- **20층**: `https://raw.githubusercontent.com/Yuris99/baptimessafy/main/data/YYYY-MM-DD.json`
+- **10층**: `https://raw.githubusercontent.com/Yuris99/baptimessafy/main/data-10f/YYYY-MM-DD.json`
 
 ## 🎨 UI 특징
 

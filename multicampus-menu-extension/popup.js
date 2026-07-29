@@ -3,8 +3,8 @@
  */
 
 // GitHub raw URLs
-const GITHUB_RAW_URL_20F = 'https://raw.githubusercontent.com/C4T4767/ssabap/main/data'
-const GITHUB_RAW_URL_10F = 'https://raw.githubusercontent.com/C4T4767/ssabap/main/data-10f'
+const GITHUB_RAW_URL_20F = 'https://raw.githubusercontent.com/Yuris99/baptimessafy/main/data'
+const GITHUB_RAW_URL_10F = 'https://raw.githubusercontent.com/Yuris99/baptimessafy/main/data-10f'
 
 // DOM 요소
 const dateInput = document.getElementById('dateInput')
