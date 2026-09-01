@@ -69,7 +69,6 @@ jobs:
           FILE_JSON=$(jq -c '
             .posts
             | to_entries
-            | map(select(.value.message | test("식단표 공유")))
             | map(select((.value.metadata.files // []) | length > 0))
             | sort_by(.value.create_at)
             | reverse
