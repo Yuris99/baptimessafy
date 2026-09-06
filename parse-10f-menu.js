@@ -114,18 +114,21 @@ async function parseMenuImage(imagePath) {
         apiKey
     })
 
-    const modelName =
-        process.env.GEMINI_MODEL || 'gemini-3.5-flash'
+    const models = process.env.GEMINI_MODEL
+        ? [process.env.GEMINI_MODEL]
+        : [
+            'gemini-3.6-flash',
+            'gemini-3.5-flash',
+            'gemini-2.5-flash'
+        ]
 
     console.log(`Parsing image: ${imagePath}`)
-    console.log(`Using model: ${modelName}`)
 
-    try {
-        const imageBuffer = fs.readFileSync(imagePath)
-        const base64Image = imageBuffer.toString('base64')
-        const mimeType = getMimeType(imagePath)
+    const imageBuffer = fs.readFileSync(imagePath)
+    const base64Image = imageBuffer.toString('base64')
+    const mimeType = getMimeType(imagePath)
 
-        const prompt = `이 이미지는 멀티캠퍼스 10층 식당의 주간 식단표입니다.
+    const prompt = `이 이미지는 멀티캠퍼스 10층 식당의 주간 식단표입니다.
 
 이미지를 분석해서 각 요일(월요일~금요일)의 식단을 JSON 형식으로 정리해주세요.
 
@@ -154,51 +157,108 @@ async function parseMenuImage(imagePath) {
   ]
 }`
 
-        console.log('Sending image to Gemini...')
+    let lastError
 
-        const response = await ai.models.generateContent({
-            model: modelName,
-            contents: [
-                {
-                    role: 'user',
-                    parts: [
+    for (const modelName of models) {
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            console.log(
+                `Using model: ${modelName} (attempt ${attempt}/3)`
+            )
+
+            try {
+                console.log('Sending image to Gemini...')
+
+                const response = await ai.models.generateContent({
+                    model: modelName,
+                    contents: [
                         {
-                            text: prompt
-                        },
-                        {
-                            inlineData: {
-                                data: base64Image,
-                                mimeType
-                            }
+                            role: 'user',
+                            parts: [
+                                {
+                                    text: prompt
+                                },
+                                {
+                                    inlineData: {
+                                        data: base64Image,
+                                        mimeType
+                                    }
+                                }
+                            ]
                         }
-                    ]
+                    ],
+                    config: {
+                        responseMimeType: 'application/json',
+                        temperature: 0.1
+                    }
+                })
+
+                const content = response.text
+
+                if (!content) {
+                    throw new Error(
+                        'Gemini returned an empty response'
+                    )
                 }
-            ],
-            config: {
-                responseMimeType: 'application/json',
-                temperature: 0.1
+
+                console.log(
+                    `✓ Gemini succeeded with ${modelName}`
+                )
+
+                console.log('Gemini Response:')
+                console.log(content)
+                console.log('\n---\n')
+
+                const menuData = extractJson(content)
+
+                return validateMenuData(menuData)
+
+            } catch (error) {
+                lastError = error
+
+                const message =
+                    error?.message || String(error)
+
+                console.error(
+                    `Failed with ${modelName} ` +
+                    `(attempt ${attempt}/3):`,
+                    message
+                )
+
+                const retryable =
+                    message.includes('503') ||
+                    message.includes('429') ||
+                    message.includes('UNAVAILABLE') ||
+                    message.includes('RESOURCE_EXHAUSTED') ||
+                    message.includes('high demand')
+
+                // 503/429 등이 아닌 실제 코드/요청 오류
+                if (!retryable) {
+                    throw error
+                }
+
+                if (attempt < 3) {
+                    const delay = 2 ** attempt * 1000
+
+                    console.log(
+                        `Retrying ${modelName} in ` +
+                        `${delay / 1000}s...`
+                    )
+
+                    await new Promise(resolve =>
+                        setTimeout(resolve, delay)
+                    )
+                }
             }
-        })
-
-        const content = response.text
-
-        if (!content) {
-            throw new Error('Gemini returned an empty response')
         }
 
-        console.log('Gemini Response:')
-        console.log(content)
-        console.log('\n---\n')
-
-        const menuData = extractJson(content)
-        return validateMenuData(menuData)
-    } catch (error) {
-        console.error(
-            'Error parsing image:',
-            error?.message || error
+        console.log(
+            `⚠ ${modelName} failed. Trying fallback model...`
         )
-        throw error
     }
+
+    throw lastError || new Error(
+        'All Gemini models failed'
+    )
 }
 
 function parseDateValue(dateValue) {
