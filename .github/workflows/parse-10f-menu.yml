@@ -48,7 +48,6 @@ jobs:
         if: steps.find-images.outputs.has_images == 'true'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: gemini-3.6-flash
         shell: bash
         run: |
           set -euo pipefail
